@@ -1,0 +1,17 @@
+[Unit]
+Description=Welding database upload server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/welding-uploader
+Environment=WELDING_SITE_DIR=/var/www/welding-site
+Environment=UPLOAD_PASSWORD=smk_upload_1103
+Environment=MAX_UPLOAD_MB=250
+ExecStart=/opt/welding-uploader/venv/bin/gunicorn -w 2 -b 127.0.0.1:8080 app:app
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target
