@@ -1,0 +1,11 @@
+{
+  "version": "2026-04-30_14-56",
+  "generated_at": "2026-04-30T14:56:00",
+  "database_file": "welding_db.json.gz",
+  "sha256": "62bbb2ad5f012740145ccd9a2a828235c5b0cbbb67a5a20e36124cb5a972679a",
+  "size_bytes": 8109245,
+  "welders": 1533,
+  "joints": 210839,
+  "period_start": "2026-03-28",
+  "period_end": "2026-04-28"
+}
