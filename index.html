@@ -1,0 +1,1626 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Статистика сварщиков — первичка</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&family=Geologica:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep:    #04080f;
+      --bg-mid:     #060d18;
+      --bg-surface: #080f1e;
+
+      /* Glass layers */
+      --glass-fill:    rgba(255,255,255,0.045);
+      --glass-fill-md: rgba(255,255,255,0.065);
+      --glass-fill-lg: rgba(255,255,255,0.08);
+      --glass-border:  rgba(255,255,255,0.10);
+      --glass-shine:   rgba(255,255,255,0.13);
+      --glass-blur: blur(32px) saturate(160%);
+
+      /* Accent orbs */
+      --orb-blue:   rgba(82, 160, 255, 0.22);
+      --orb-cyan:   rgba(50, 210, 200, 0.12);
+      --orb-warm:   rgba(255, 145, 80, 0.07);
+
+      --text:   #f0f4ff;
+      --text-2: rgba(210, 220, 240, 0.72);
+      --text-3: rgba(160, 180, 210, 0.52);
+
+      --blue:   #6ab3ff;
+      --blue-2: #4da3ff;
+      --green:  #34d399;
+      --red:    #ff6b8a;
+      --yellow: #fbbf24;
+      --cyan:   #22d3ee;
+
+      --radius-2xl: 28px;
+      --radius-xl:  22px;
+      --radius-lg:  18px;
+      --radius-md:  14px;
+      --radius-sm:  10px;
+      --radius-xs:  7px;
+
+      --shadow-panel: 0 2px 1px rgba(255,255,255,0.04) inset, 0 24px 64px rgba(0,0,0,0.52), 0 4px 16px rgba(0,0,0,0.30);
+      --shadow-sm: 0 8px 28px rgba(0,0,0,0.38);
+      --transition: 0.22s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { color-scheme: dark; -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Geologica", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      background: var(--bg-deep);
+      background-image:
+        radial-gradient(ellipse 70% 50% at 15% 8%,  var(--orb-blue), transparent),
+        radial-gradient(ellipse 50% 40% at 82% 6%,  var(--orb-cyan), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 88%, var(--orb-blue), transparent),
+        radial-gradient(ellipse 40% 30% at 5%  90%, var(--orb-warm), transparent);
+      background-attachment: fixed;
+    }
+
+    /* Noise grain overlay */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.038'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      opacity: 1;
+    }
+
+    *::-webkit-scrollbar { width: 8px; height: 8px; }
+    *::-webkit-scrollbar-track { background: transparent; }
+    *::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.10);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    *::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); border: 2px solid transparent; background-clip: padding-box; }
+
+    /* ── GLASS CARD ───────────────────────────────────── */
+    .glass {
+      position: relative;
+      background: var(--glass-fill);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-panel);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      overflow: hidden;
+    }
+    /* top shine highlight */
+    .glass::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background: linear-gradient(160deg,
+        rgba(255,255,255,0.10) 0%,
+        rgba(255,255,255,0.03) 40%,
+        transparent 70%);
+    }
+
+    /* ── HEADER ───────────────────────────────────────── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px clamp(16px, 3vw, 40px);
+      background: rgba(4, 8, 15, 0.62);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    header::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+      pointer-events: none;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(18px, 2.4vw, 24px);
+      font-weight: 600;
+      letter-spacing: -0.04em;
+      color: var(--text);
+    }
+    .brand p {
+      margin: 3px 0 0;
+      color: var(--text-3);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    /* ── MAIN ─────────────────────────────────────────── */
+    main {
+      position: relative;
+      z-index: 1;
+      width: min(1540px, 100%);
+      margin: 0 auto;
+      padding: 28px clamp(14px, 3vw, 40px) 60px;
+    }
+
+    .card { border-radius: var(--radius-xl); }
+    .hidden { display: none !important; }
+    .muted { color: var(--text-3); }
+    .error { color: var(--red); font-weight: 600; }
+
+    /* ── STATUS & FILE LABEL ──────────────────────────── */
+    .status, .file-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 38px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-3);
+      font-size: 13px;
+      font-weight: 500;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: var(--transition);
+    }
+    .status.ok { color: var(--cyan); border-color: rgba(34,211,238,0.22); }
+    .status.error { color: var(--red); border-color: rgba(255,107,138,0.22); }
+    .file-label {
+      color: var(--text);
+      cursor: pointer;
+      border-color: rgba(255,255,255,0.13);
+      background: rgba(255,255,255,0.07);
+    }
+    .file-label:hover {
+      background: rgba(255,255,255,0.11);
+      border-color: rgba(255,255,255,0.20);
+    }
+    .file-label input { display: none; }
+
+    /* ── FORM ELEMENTS ────────────────────────────────── */
+    input, select, button { font: inherit; }
+    input, select {
+      width: 100%;
+      padding: 12px 16px;
+      color: var(--text);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: var(--radius-md);
+      outline: none;
+      transition: var(--transition);
+      -webkit-appearance: none;
+    }
+    input::placeholder { color: var(--text-3); }
+    select, option { background-color: #0a1528; color: var(--text); }
+    input:focus, select:focus {
+      border-color: rgba(106, 179, 255, 0.45);
+      background: rgba(255,255,255,0.07);
+      box-shadow: 0 0 0 3px rgba(106,179,255,0.12);
+    }
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--text-3);
+      font-size: 11.5px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      padding: 11px 20px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      color: #fff;
+      background: linear-gradient(145deg, rgba(100,170,255,0.90), rgba(58,120,230,0.95));
+      box-shadow: 0 1px 0 rgba(255,255,255,0.14) inset, 0 8px 24px rgba(58,120,230,0.28);
+      transition: var(--transition);
+      letter-spacing: -0.01em;
+    }
+    button:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,0.14) inset, 0 12px 30px rgba(58,120,230,0.34); }
+    button:active { transform: translateY(0); opacity: 1; }
+
+    button.secondary, button.ghost, button.tab {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-2);
+      border-color: rgba(255,255,255,0.09);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.07) inset;
+    }
+    button.secondary:hover, button.ghost:hover {
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.15);
+      opacity: 1;
+      transform: none;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.07) inset;
+    }
+    button.small { padding: 8px 14px; font-size: 13px; }
+    button:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
+
+    button.tab {
+      min-width: 120px;
+      color: var(--text-3);
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+    }
+    button.tab.active {
+      color: var(--text);
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.16);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.10) inset, 0 4px 16px rgba(0,0,0,0.22);
+    }
+
+    /* ── LOGIN ────────────────────────────────────────── */
+    .login-wrap {
+      width: min(440px, 100%);
+      margin: 72px auto 0;
+      padding: 36px;
+    }
+    .login-wrap::before {
+      background: linear-gradient(145deg,
+        rgba(255,255,255,0.12) 0%,
+        rgba(255,255,255,0.04) 50%,
+        transparent 100%);
+    }
+    .login-wrap h2 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+    }
+    .form-grid { display: grid; gap: 16px; margin-top: 24px; }
+    .small-note { margin: 0; font-size: 13.5px; color: var(--text-3); }
+
+    .db-load-panel {
+      margin-top: 18px;
+      padding: 13px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.045);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+    }
+    .db-load-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--text-2);
+      font-weight: 600;
+    }
+    #dbLoadPercent {
+      color: var(--cyan);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .db-load-track {
+      height: 7px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.075);
+    }
+    .db-load-track span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--blue));
+      box-shadow: 0 0 16px rgba(34,211,238,0.25);
+      transition: width 0.25s ease;
+    }
+    .db-load-details {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-3);
+      line-height: 1.35;
+    }
+    .db-load-panel.done #dbLoadPercent { color: var(--green); }
+    .db-load-panel.done .db-load-track span { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+    .db-load-panel.error #dbLoadPercent { color: var(--red); }
+    .db-load-panel.error .db-load-track span { background: var(--red); }
+    #loginBtn:disabled {
+      opacity: 0.45;
+      cursor: wait;
+      transform: none !important;
+      box-shadow: none;
+    }
+
+    /* ── HERO BANNER ──────────────────────────────────── */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: center;
+      padding: 28px 30px;
+      margin-bottom: 20px;
+    }
+    .hero h2 {
+      margin: 0 0 10px;
+      font-size: clamp(26px, 3.2vw, 38px);
+      font-weight: 700;
+      letter-spacing: -0.06em;
+      line-height: 1.08;
+    }
+    .hero .meta {
+      color: var(--text-2);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .pill-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 13px;
+      border-radius: 999px;
+      color: var(--text-2);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .hero-mark {
+      width: 100px;
+      height: 100px;
+      border-radius: 26px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 32% 28%, rgba(255,255,255,0.13), transparent 50%),
+        linear-gradient(145deg, rgba(106,179,255,0.18), rgba(50,210,200,0.08));
+      border: 1px solid rgba(255,255,255,0.13);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.10) inset, var(--shadow-sm);
+      flex-shrink: 0;
+    }
+    .hero-mark span {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: var(--text);
+    }
+
+    /* ── TABS ─────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 16px 0 24px;
+      padding: 5px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md);
+      width: fit-content;
+    }
+
+    /* ── ADMIN LAYOUT ─────────────────────────────────── */
+    .admin-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .side { padding: 22px; }
+    .side h3 { margin: 0 0 18px; font-size: 18px; font-weight: 700; letter-spacing: -0.04em; }
+
+    /* ── SUMMARY STATS ────────────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+    .summary-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 10px 0 0;
+      flex-wrap: nowrap;
+      min-height: 46px;
+    }
+    .section-title h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    .inline-controls { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+    .inline-controls .field { min-width: 148px; }
+    .inline-controls .field label { margin-bottom: 5px; font-size: 10.5px; }
+    .inline-controls.compact label { display:none; }
+    .inline-controls.compact .field { min-width: 140px; }
+    .inline-controls.compact { margin-left: auto; }
+    .inline-controls.compact input { padding: 10px 13px; }
+
+    /* ── STATS PANEL ──────────────────────────────────── */
+    .stats-panel {
+      position: relative;
+      overflow: hidden;
+      padding: 24px 26px;
+      height: 100%;
+    }
+    /* inner glow on panel */
+    .stats-panel::before {
+      background: linear-gradient(145deg,
+        rgba(255,255,255,0.11) 0%,
+        rgba(255,255,255,0.04) 45%,
+        transparent 75%),
+        radial-gradient(ellipse 70% 50% at 90% 90%, rgba(50,210,180,0.07), transparent),
+        radial-gradient(ellipse 60% 40% at 5% 5%, rgba(106,179,255,0.06), transparent);
+    }
+
+    .panel-head {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .panel-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.20em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--text-3);
+    }
+    .panel-head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .panel-period { color: var(--text-3); font-size: 12px; letter-spacing: 0.06em; }
+
+    .stat-lines { position: relative; z-index: 1; display: grid; }
+    .stat-line {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 13px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .stat-line:last-child { border-bottom: 0; padding-bottom: 0; }
+    .stat-line .name { color: var(--text-2); font-size: 14px; line-height: 1.3; font-weight: 400; }
+    .stat-line .value {
+      font-size: clamp(26px, 2.6vw, 38px);
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      white-space: nowrap;
+    }
+    .value.blue   { color: var(--blue); }
+    .value.green  { color: var(--green); }
+    .value.red    { color: var(--red); }
+    .value.yellow { color: var(--yellow); }
+
+    /* progress bar */
+    .progress-area { position: relative; z-index: 1; margin-top: 20px; }
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--text-3);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .progress-track {
+      height: 6px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.07);
+    }
+    .progress-track span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--blue));
+      box-shadow: 0 0 14px rgba(34,211,238,0.30);
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .summary-meta {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 16px;
+    }
+    .summary-chip {
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text-3);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* ── TABLE CARD ───────────────────────────────────── */
+    .table-card { overflow: hidden; margin-top: 14px; }
+
+    .joints-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+    }
+    .toolbar-search { flex: 1 1 320px; min-width: 240px; height: 42px; }
+    .toolbar-count {
+      white-space: nowrap;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: var(--radius-md);
+      font-size: 12.5px;
+      color: var(--text-2);
+    }
+    .toolbar-date { width: 148px; height: 42px; }
+    .toolbar-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: stretch; }
+    .toolbar-actions button { height: 42px; display: flex; align-items: center; padding-top: 0; padding-bottom: 0; }
+    .joints-toolbar select { height: 42px; padding-top: 0; padding-bottom: 0; }
+    .joints-toolbar input { height: 42px; padding-top: 0; padding-bottom: 0; }
+
+    .table-toolbar {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) 150px 150px 210px 160px auto;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+      align-items: end;
+    }
+
+    .table-wrap { overflow: auto; max-height: 68vh; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+    th, td {
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      white-space: normal;
+      vertical-align: middle;
+      word-break: break-word;
+      text-align: center;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      text-align: center;
+      background: rgba(6, 12, 24, 0.96);
+      backdrop-filter: blur(20px);
+      color: var(--text-3);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+    td.long { white-space: normal; }
+
+    /* Колонки: Дата / Изометрия / Тип / №стыка / Материал / Ø-S / Способ сварки / Заявки / Бригадир / Прораб / Результат / Дефекты */
+    th:nth-child(1),  td:nth-child(1)  { width: 58px; }   /* Дата — узко, двухстрочный формат */
+    th:nth-child(2),  td:nth-child(2)  { width: 160px; }  /* Изометрия — до второго тире */
+    th:nth-child(3),  td:nth-child(3)  { width: 52px; }   /* Тип */
+    th:nth-child(4),  td:nth-child(4)  { width: 88px; }   /* № стыка */
+    th:nth-child(5),  td:nth-child(5)  { width: 98px; }   /* Материал */
+    th:nth-child(6),  td:nth-child(6)  { width: 80px; }   /* Ø / S */
+    th:nth-child(7),  td:nth-child(7)  { width: 100px; }  /* Способ сварки — шире чтоб заголовок влезал */
+    th:nth-child(8),  td:nth-child(8)  { width: 200px; }  /* Заявки — чуть сжато */
+    th:nth-child(9),  td:nth-child(9)  { width: 100px; }  /* Бригадир — шире на 3 символа */
+    th:nth-child(10), td:nth-child(10) { width: 86px; }   /* Прораб — шире на 3 символа */
+    th:nth-child(11), td:nth-child(11) { width: 118px; }  /* Результат — компактнее */
+    th:nth-child(12), td:nth-child(12) { width: 170px; }  /* Дефекты — шире */
+
+    /* Дата: убираем точку между месяцем и годом через CSS-обёртку */
+    td:nth-child(1) { font-size: 11.5px; line-height: 1.35; word-break: keep-all; }
+
+    td.result-cell { padding-right: 10px; }
+    tr { transition: background var(--transition); }
+    tr:hover td { background: rgba(255,255,255,0.028); }
+
+    /* ── BADGE ────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 148px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      text-align: center;
+      white-space: normal;
+      line-height: 1.3;
+      letter-spacing: 0.01em;
+    }
+    .badge.good { color: var(--green);  background: rgba(52,211,153,0.10); border-color: rgba(52,211,153,0.20); }
+    .badge.bad  { color: var(--red);    background: rgba(255,107,138,0.10); border-color: rgba(255,107,138,0.20); }
+    .badge.wait { color: var(--yellow); background: rgba(251,191,36,0.10);  border-color: rgba(251,191,36,0.20); }
+    .badge.none { color: var(--text-3); background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.09); }
+
+    /* ── PAGINATION ───────────────────────────────────── */
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-3);
+      font-size: 13px;
+    }
+
+    /* ── WIP / DEV ────────────────────────────────────── */
+    .dev {
+      padding: 52px 32px;
+      text-align: center;
+      color: var(--text-3);
+    }
+    .dev strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text-2);
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    /* ── FOOTER ───────────────────────────────────────── */
+    .site-footer {
+      margin-top: 24px;
+      padding: 18px 0 6px;
+      color: var(--text-3);
+      text-align: center;
+      font-size: 12.5px;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── RESPONSIVE ───────────────────────────────────── */
+    @media (max-width: 1080px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .section-title { flex-wrap: wrap; min-height: 0; }
+      .inline-controls, .inline-controls.compact { margin-left: 0; flex-wrap: wrap; }
+    }
+    @media (max-width: 980px) {
+      header { align-items: flex-start; flex-direction: column; }
+      .admin-layout { grid-template-columns: 1fr; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-mark { width: 88px; height: 88px; border-radius: 22px; }
+    }
+    @media (max-width: 760px) {
+      .stat-line .name { font-size: 13.5px; }
+      .stat-line .value { font-size: 28px; }
+      .badge { max-width: 100%; }
+      .inline-controls { width: 100%; flex-wrap: wrap; }
+      .inline-controls .field { min-width: 100%; }
+      .toolbar-search, .toolbar-date { width: 100%; min-width: 100%; }
+      .panel-head-right { justify-content: flex-start; }
+      .login-wrap { margin-top: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>Статистика сварщиков</h1>
+      <p>Первичка · СМК</p>
+    </div>
+    <div class="header-actions">
+      <span id="dbStatus" class="status">База не загружена</span>
+      <span id="dbUpdateStatus" class="status hidden">Дата обновления базы: —</span>
+      <label id="dbLoadLabel" class="file-label">
+        Подгрузить базу
+        <input id="dbFile" type="file" accept=".json,.gz,application/json,application/gzip" />
+      </label>
+      <button id="logoutBtn" class="ghost small hidden">Выйти</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="loginView" class="card glass login-wrap">
+      <h2>Добро пожаловать</h2>
+      <p class="small-note">Введите логин и пароль из листа «Статистика».</p>
+      <div id="dbLoadPanel" class="db-load-panel">
+        <div class="db-load-row">
+          <span id="dbLoadTitle">Загрузка базы…</span>
+          <span id="dbLoadPercent">0%</span>
+        </div>
+        <div class="db-load-track"><span id="dbLoadBar"></span></div>
+        <div id="dbLoadDetails" class="db-load-details">Подключаемся к базе рядом с сайтом…</div>
+      </div>
+      <div class="form-grid">
+        <div>
+          <label for="loginInput">Логин</label>
+          <input id="loginInput" autocomplete="username" placeholder="например: ivanov01 или admin" />
+        </div>
+        <div>
+          <label for="passwordInput">Пароль</label>
+          <input id="passwordInput" type="password" autocomplete="current-password" placeholder="Введите пароль" />
+        </div>
+        <button id="loginBtn">Войти</button>
+        <div id="loginMsg" class="muted" style="font-size:13.5px;"></div>
+      </div>
+    </section>
+
+    <section id="appView" class="hidden">
+      <div id="topHero" class="card glass hero"></div>
+
+      <div class="tabs">
+        <button id="tabPrimaryBtn" class="tab active">Первичка</button>
+        <button id="tabRepairsBtn" class="tab">Ремонты</button>
+      </div>
+
+      <div id="primaryTab">
+        <div id="adminPanel" class="admin-layout hidden">
+          <aside class="card glass side">
+            <h3>Панель инженера</h3>
+            <label for="welderSearch">Поиск сварщика</label>
+            <input id="welderSearch" placeholder="ФИО, клеймо, организация, логин" />
+            <div style="height:14px"></div>
+            <label for="welderSelect">Выбор сварщика</label>
+            <select id="welderSelect"></select>
+            <div style="height:14px"></div>
+            <button id="openWelderBtn" style="width:100%;">Открыть профиль</button>
+            <p class="muted" id="adminInfo" style="line-height:1.7; margin:16px 0 0; font-size:13px;"></p>
+          </aside>
+
+          <div class="card glass table-card" style="margin-top:0;">
+            <div class="table-toolbar" style="grid-template-columns:minmax(220px, 1fr) 210px 180px;">
+              <input id="adminTableSearch" placeholder="Фильтр: ФИО, клеймо, организация…" />
+              <select id="adminStatusFilter">
+                <option value="">Все статусы</option>
+              </select>
+              <button id="resetAdminFilters" class="secondary">Сбросить</button>
+            </div>
+            <div class="table-wrap" style="max-height:440px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ФИО</th><th>Клеймо</th><th>Статус</th><th>Орг.</th><th>Всего</th><th>Н/Г</th><th>% брака</th>
+                  </tr>
+                </thead>
+                <tbody id="adminTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="welderBlock" class="hidden">
+          <div class="summary-grid">
+            <div class="summary-col">
+              <div class="section-title"><h3>Статистика за всё время</h3></div>
+              <div id="allTimeCards"></div>
+            </div>
+            <div class="summary-col">
+              <div class="section-title">
+                <h3>Статистика за период</h3>
+                <div class="inline-controls compact">
+                  <div class="field"><input id="periodStart" type="date" /></div>
+                  <div class="field"><input id="periodEnd" type="date" /></div>
+                  <button id="applyPeriodBtn">Пересчитать</button>
+                </div>
+              </div>
+              <div id="periodCards"></div>
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-top:26px;">
+            <h3>Стыки сварщика</h3>
+          </div>
+
+          <div class="card glass table-card">
+            <div class="joints-toolbar">
+              <input id="jointSearch" class="toolbar-search" placeholder="Поиск: изометрия, стык, заявка, прораб…" />
+              <div id="jointCount" class="pill toolbar-count"></div>
+              <input id="jointDateStart" class="toolbar-date" type="date" />
+              <input id="jointDateEnd" class="toolbar-date" type="date" />
+              <div class="toolbar-actions">
+                <button id="resetJointDateBtn" class="ghost small">Сбросить</button>
+              </div>
+              <select id="resultFilter">
+                <option value="">Все результаты</option>
+                <option>Годен</option>
+                <option>Не годен</option>
+                <option>Ожидание контроля</option>
+                <option>Контроль РК/УЗК не требуется</option>
+              </select>
+              <select id="pageSize">
+                <option value="50">50 строк</option>
+                <option value="100" selected>100 строк</option>
+                <option value="200">200 строк</option>
+                <option value="500">500 строк</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>Изометрия</th>
+                    <th>Тип</th>
+                    <th>№ стыка</th>
+                    <th>Материал</th>
+                    <th>Ø / S</th>
+                    <th>Способ сварки</th>
+                    <th>Заявки</th>
+                    <th>Бригадир</th>
+                    <th>Прораб</th>
+                    <th>Результат</th>
+                    <th>Дефекты</th>
+                  </tr>
+                </thead>
+                <tbody id="jointsBody"></tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span id="pageInfo">—</span>
+              <span>
+                <button id="prevPageBtn" class="ghost small">Назад</button>
+                <button id="nextPageBtn" class="ghost small">Вперёд</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="repairsTab" class="hidden">
+        <div class="card glass dev">
+          <strong>Ремонты — раздел в разработке</strong>
+          <span>Скоро подключим отдельный экран.</span>
+        </div>
+      </div>
+    </section>
+    <div class="site-footer">© 2026 — Кузнецов Илья Сергеевич</div>
+  </main>
+
+<script>
+let DB = null;
+let F = {};
+let currentRole = null;
+let currentWelder = null;
+let selectedWelder = null;
+let welderByLogin = new Map();
+let welderById = new Map();
+let jointsCache = new Map();
+let currentRows = [];
+let currentPage = 1;
+let adminRows = [];
+
+const $ = id => document.getElementById(id);
+
+function setStatus(text, kind = "") {
+  const el = $("dbStatus");
+  const keepHidden = el.classList.contains("hidden");
+  el.textContent = text;
+  el.className = "status" + (kind ? " " + kind : "");
+  if (keepHidden) el.classList.add("hidden");
+}
+
+let dbLoadStartedAt = 0;
+let dbLoadProgress = 0;
+
+function formatLoadTime(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return "несколько секунд";
+  const sec = Math.ceil(ms / 1000);
+  if (sec < 60) return sec + " сек";
+  const min = Math.floor(sec / 60);
+  const rest = sec % 60;
+  return rest ? `${min} мин ${rest} сек` : `${min} мин`;
+}
+
+function setLoginReady(isReady) {
+  const btn = $("loginBtn");
+  if (!btn) return;
+  btn.disabled = false;
+  btn.textContent = "Войти";
+}
+
+function setDbLoadState(title, progress, details = "", kind = "") {
+  const panel = $("dbLoadPanel");
+  if (!panel) return;
+
+  const safeProgress = Math.max(0, Math.min(100, Math.round(progress || 0)));
+  dbLoadProgress = safeProgress;
+
+  const titleEl = $("dbLoadTitle");
+  const percentEl = $("dbLoadPercent");
+  const barEl = $("dbLoadBar");
+  const detailsEl = $("dbLoadDetails");
+
+  panel.classList.toggle("done", kind === "done");
+  panel.classList.toggle("error", kind === "error");
+
+  if (titleEl) titleEl.textContent = title;
+  if (percentEl) percentEl.textContent = safeProgress + "%";
+  if (barEl) barEl.style.width = safeProgress + "%";
+
+  let text = details;
+  if (kind !== "done" && kind !== "error" && safeProgress > 5 && safeProgress < 98 && dbLoadStartedAt) {
+    const elapsed = performance.now() - dbLoadStartedAt;
+    const remaining = elapsed * (100 - safeProgress) / safeProgress;
+    text += (text ? " · " : "") + "примерно осталось: " + formatLoadTime(remaining);
+  }
+  if (detailsEl) detailsEl.textContent = text;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  }[ch]));
+}
+
+function norm(value) {
+  return String(value ?? "").trim().toLowerCase().replaceAll("ё", "е").replace(/\s+/g, " ");
+}
+
+function num(v, digits = 0) {
+  if (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) return "—";
+  return Number(v).toLocaleString("ru-RU", { maximumFractionDigits: digits, minimumFractionDigits: digits });
+}
+
+function percent(v) {
+  if (v === null || v === undefined || v === "" || String(v).includes("нет")) return "—";
+  const n = Number(v);
+  if (!Number.isFinite(n)) return escapeHtml(v);
+  return (n * 100).toLocaleString("ru-RU", { maximumFractionDigits: 1 }) + "%";
+}
+
+function dateRu(iso) {
+  if (!iso) return "—";
+  const d = new Date(String(iso) + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return escapeHtml(iso);
+  return d.toLocaleDateString("ru-RU");
+}
+
+function dateRuTable(iso) {
+  if (!iso) return "—";
+  const d = new Date(String(iso) + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return escapeHtml(iso);
+  const day   = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year  = d.getFullYear();
+  return `${day}.${month}<br>${year}`;
+}
+
+// Обрезает изометрию до второго тире включительно
+function isoShort(str) {
+  if (!str) return "—";
+  let count = 0;
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === "-") { count++; if (count === 2) return str.slice(0, i + 1); }
+  }
+  return str; // если тире меньше двух — возвращаем как есть
+}
+
+function dateTimeRu(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return escapeHtml(String(value));
+  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+async function sha256(text) {
+  const bytes = new TextEncoder().encode(text || "");
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function jval(row, field) {
+  if (!row) return null;
+  if (Array.isArray(row)) return row[F[field]];
+  if (field === "ut_date") return row.ndt?.ut_date ?? null;
+  if (field === "ut_result") return row.ndt?.ut_result ?? null;
+  if (field === "rt_date") return row.ndt?.rt_date ?? null;
+  if (field === "rt_result") return row.ndt?.rt_result ?? null;
+  return row[field];
+}
+
+function displayResult(result) {
+  return result === "Контроль не назначен" ? "Контроль РК/УЗК не требуется" : (result || "—");
+}
+
+function resultClass(result) {
+  const r = displayResult(result);
+  if (r === "Годен") return "good";
+  if (r === "Не годен") return "bad";
+  if (r === "Ожидание контроля") return "wait";
+  return "none";
+}
+
+function badge(result) {
+  return `<span class="badge ${resultClass(result)}">${escapeHtml(displayResult(result))}</span>`;
+}
+
+function isNoControlResult(result) {
+  const r = displayResult(result);
+  return r === "Контроль РК/УЗК не требуется";
+}
+
+function jointDefects(row) {
+  const direct = jval(row, "defects") ?? jval(row, "defect_text") ?? jval(row, "defect") ?? jval(row, "defects_text");
+  const result = displayResult(jval(row, "result"));
+  if (result !== "Не годен") return "—";
+  return direct ? escapeHtml(direct) : "—";
+}
+
+function rejectRateColor(rate) {
+  const n = Number(rate);
+  if (!Number.isFinite(n)) return "blue";
+  const pct = n * 100;
+  if (pct < 15) return "green";
+  if (pct <= 25) return "yellow";
+  return "red";
+}
+
+function updateDbUpdateStatus() {
+  const meta = DB?.meta || {};
+  $("dbUpdateStatus").textContent = `Дата обновления базы: ${dateTimeRu(meta.generated_at || meta.source_file_mtime || meta.generated_date)}`;
+}
+
+function updateHeaderControls() {
+  const welderMode = currentRole === "welder";
+  const adminMode = currentRole === "admin" || currentRole === null;
+  $("dbStatus").classList.toggle("hidden", welderMode);
+  $("dbLoadLabel").classList.toggle("hidden", !adminMode);
+  $("dbUpdateStatus").classList.toggle("hidden", !welderMode);
+}
+
+function buildIndexes() {
+  F = {};
+  (DB.joint_fields || []).forEach((name, idx) => F[name] = idx);
+
+  welderByLogin = new Map();
+  welderById = new Map();
+  for (const w of DB.welders || []) {
+    welderById.set(w.id, w);
+    if (w.login && !welderByLogin.has(norm(w.login))) welderByLogin.set(norm(w.login), w);
+  }
+
+  const statuses = [...new Set((DB.welders || []).map(w => w.status).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru"));
+  $("adminStatusFilter").innerHTML = `<option value="">Все статусы</option>` + statuses.map(s => `<option>${escapeHtml(s)}</option>`).join("");
+
+  fillWelderSelect(DB.welders || []);
+  renderAdminTable();
+  updateDbUpdateStatus();
+}
+
+async function blobToTextMaybeGzip(blob) {
+  const raw = await blob.text();
+  if (raw.trim().startsWith("{")) return raw;
+
+  if (!("DecompressionStream" in window)) {
+    throw new Error("Браузер не умеет распаковывать .gz. Подгрузи обычный welding_db.json или открой в Chrome/Edge.");
+  }
+
+  const stream = blob.stream().pipeThrough(new DecompressionStream("gzip"));
+  return await new Response(stream).text();
+}
+
+async function loadDbFromUrl(url) {
+  setDbLoadState("Загрузка базы…", 3, `Запрашиваем ${url}`);
+
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+
+  const contentLength = Number(res.headers.get("Content-Length")) || 0;
+  let blob;
+
+  if (res.body && res.body.getReader) {
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+
+      if (contentLength) {
+        const mbReceived = (received / 1024 / 1024).toFixed(1);
+        const mbTotal = (contentLength / 1024 / 1024).toFixed(1);
+        const downloadProgress = 5 + (received / contentLength) * 55;
+        setDbLoadState("Загрузка базы…", downloadProgress, `Скачано ${mbReceived} из ${mbTotal} МБ`);
+      } else {
+        const mbReceived = (received / 1024 / 1024).toFixed(1);
+        setDbLoadState("Загрузка базы…", 35, `Скачано ${mbReceived} МБ`);
+      }
+    }
+
+    blob = new Blob(chunks);
+  } else {
+    blob = await res.blob();
+  }
+
+  setDbLoadState("Распаковка базы…", 68, "Файл скачан, распаковываем gzip");
+  const text = await blobToTextMaybeGzip(blob);
+
+  setDbLoadState("Чтение базы…", 84, "Разбираем JSON и готовим данные");
+  const parsed = JSON.parse(text);
+
+  setDbLoadState("Подготовка кабинета…", 94, "Строим индексы сварщиков и стыков");
+  return parsed;
+}
+
+async function tryAutoLoad() {
+  updateHeaderControls();
+  setLoginReady(false);
+  dbLoadStartedAt = performance.now();
+  setStatus("Пробую найти базу рядом с HTML…");
+  setDbLoadState("Загрузка базы…", 1, "Ищем welding_db.json.gz рядом с сайтом");
+  updateHeaderControls();
+
+  for (const url of ["welding_db.json.gz", "welding_db.json"]) {
+    try {
+      DB = await loadDbFromUrl(url);
+      afterDbLoaded(url);
+      return;
+    } catch (e) {
+      console.warn("Не удалось загрузить базу:", url, e);
+    }
+  }
+
+  setStatus("Выбери welding_db.json.gz или welding_db.json");
+  setDbLoadState("База не загружена", 0, "База не загружена, обновите страницу.", "error");
+  setLoginReady(false);
+  updateHeaderControls();
+  $("loginMsg").innerHTML = `<span class="error">База не загружена, обновите страницу.</span>`;
+}
+
+function afterDbLoaded(sourceName) {
+  setDbLoadState("База готова", 96, "Финальная подготовка данных");
+  buildIndexes();
+  setStatus(`База загружена: ${num((DB.welders || []).length)} сварщиков, ${num((DB.joints || []).length)} стыков`, "ok");
+  const meta = DB.meta || {};
+  setDbLoadState("База готова", 100, `Можно входить · ${num((DB.welders || []).length)} сварщиков · ${num((DB.joints || []).length)} стыков`, "done");
+  setLoginReady(true);
+  $("loginMsg").innerHTML = `Период базы: <b>${dateRu(meta.period_start)} — ${dateRu(meta.period_end)}</b>.`;
+  updateDbUpdateStatus();
+  updateHeaderControls();
+  const loginButton = $("loginBtn");
+  if (loginButton) {
+    loginButton.disabled = false;
+    loginButton.textContent = "Войти";
+  }
+}
+
+function fillWelderSelect(list) {
+  $("welderSelect").innerHTML = list
+    .slice()
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ru"))
+    .map(w => `<option value="${escapeHtml(w.id)}">${escapeHtml(w.name || w.login || w.id)}${w.stamp ? " / " + escapeHtml(w.stamp) : ""}</option>`)
+    .join("");
+}
+
+async function doLogin() {
+  $("loginMsg").textContent = "";
+  if (!DB) {
+    $("loginMsg").innerHTML = `<span class="error">База ещё загружается, подождите пару секунд.</span>`;
+    return;
+  }
+
+  const login = norm($("loginInput").value);
+  const password = $("passwordInput").value;
+  const passHash = await sha256(password);
+
+  if (login === norm(DB.auth?.admin_login || "admin") && passHash === DB.auth?.admin_password_hash) {
+    currentRole = "admin";
+    currentWelder = null;
+    selectedWelder = null;
+    enterApp();
+    return;
+  }
+
+  const w = welderByLogin.get(login);
+  if (w && passHash === w.password_hash) {
+    currentRole = "welder";
+    currentWelder = w;
+    selectedWelder = w;
+    enterApp();
+    return;
+  }
+
+  $("loginMsg").innerHTML = `<span class="error">Логин или пароль не подошли.</span>`;
+}
+
+function enterApp() {
+  $("loginView").classList.add("hidden");
+  $("appView").classList.remove("hidden");
+  $("logoutBtn").classList.remove("hidden");
+  $("tabPrimaryBtn").classList.add("active");
+  $("tabRepairsBtn").classList.remove("active");
+  $("primaryTab").classList.remove("hidden");
+  $("repairsTab").classList.add("hidden");
+  updateHeaderControls();
+
+  if (currentRole === "admin") {
+    $("adminPanel").classList.remove("hidden");
+    $("welderBlock").classList.add("hidden");
+    renderTopHero(null);
+  } else {
+    $("adminPanel").classList.add("hidden");
+    $("welderBlock").classList.remove("hidden");
+    renderWelder(currentWelder);
+  }
+}
+
+function logout() {
+  currentRole = null;
+  currentWelder = null;
+  selectedWelder = null;
+  currentRows = [];
+  currentPage = 1;
+  $("appView").classList.add("hidden");
+  $("loginView").classList.remove("hidden");
+  $("logoutBtn").classList.add("hidden");
+  $("passwordInput").value = "";
+  updateHeaderControls();
+}
+
+function renderTopHero(w) {
+  const meta = DB?.meta || {};
+  if (!w) {
+    $("topHero").innerHTML = `
+      <div>
+        <h2>Админ-кабинет</h2>
+        <div class="meta">
+          Период файла: <b>${dateRu(meta.period_start)} — ${dateRu(meta.period_end)}</b><br>
+          Стыков первички: <b>${num(meta.primary_rows_included)}</b> · Не сопоставлено по ФИО: <b>${num(meta.rows_unmatched_to_welder)}</b>
+        </div>
+        <div class="pill-wrap">
+          <span class="pill">логин: admin</span>
+          <span class="pill">обновлено: ${dateTimeRu(meta.generated_at || meta.source_file_mtime || meta.generated_date)}</span>
+        </div>
+      </div>
+      <div class="hero-mark"><span>ADM</span></div>`;
+    return;
+  }
+
+  $("topHero").innerHTML = `
+    <div>
+      <h2>${escapeHtml(w.name || "Сварщик")}</h2>
+      <div class="meta">
+        Клеймо: <b>${escapeHtml(w.stamp || "—")}</b> · Организация: <b>${escapeHtml(w.organization || "—")}</b> · Статус: <b>${escapeHtml(w.status || "—")}</b><br>
+        Смена: ${escapeHtml(w.shift || "—")} · Позиция: ${escapeHtml(w.position || "—")} · Ответственный: ${escapeHtml(w.responsible || "—")}
+      </div>
+      <div class="pill-wrap">
+        <span class="pill">логин: ${escapeHtml(w.login || "—")}</span>
+        ${currentRole === "admin" ? `<span class="pill">просмотр админом</span>` : ""}
+      </div>
+    </div>
+    <div class="hero-mark"><span>${escapeHtml(w.stamp || "W")}</span></div>`;
+}
+
+function statLine(label, value, cls = "blue") {
+  return `<div class="stat-line"><div class="name">${escapeHtml(label)}</div><div class="value ${cls}">${value}</div></div>`;
+}
+
+function summaryPanel(title, s, extraMeta = [], rightLabel = "", actionsHtml = "") {
+  const controlled = Number(s.accepted || 0) + Number(s.rejected || 0);
+  const goodShare = controlled ? Math.max(0, Math.min(100, Number(s.accepted || 0) / controlled * 100)) : 0;
+  const metaHtml = extraMeta.filter(Boolean).map(text => `<span class="summary-chip">${text}</span>`).join("");
+  const rejectClass = rejectRateColor(s.reject_rate);
+
+  return `
+    <div class="card glass stats-panel">
+      <div class="panel-head">
+        <div class="panel-eyebrow">${escapeHtml(title)}</div>
+        <div class="panel-head-right">${rightLabel ? `<div class="panel-period">${escapeHtml(rightLabel)}</div>` : ""}${actionsHtml}</div>
+      </div>
+      <div class="stat-lines">
+        ${statLine("Всего сварено", num(s.total_welded), "blue")}
+        ${statLine("Выработка", num(s.production, 2), "blue")}
+        ${statLine("Всего проконтролировано", num(controlled), "blue")}
+        ${statLine("Годных стыков", num(s.accepted), "green")}
+        ${statLine("Брак", num(s.rejected), "red")}
+        ${statLine("Процент брака", percent(s.reject_rate), rejectClass)}
+      </div>
+      <div class="progress-area">
+        <div class="progress-labels">
+          <span>Годных</span>
+          <span>${goodShare.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}%</span>
+        </div>
+        <div class="progress-track"><span style="width:${goodShare}%;"></span></div>
+      </div>
+      ${metaHtml ? `<div class="summary-meta">${metaHtml}</div>` : ""}
+    </div>`;
+}
+
+function renderAllTimeCards(w) {
+  const s = w.stats_all || {};
+  $("allTimeCards").innerHTML = summaryPanel("Всё время", s, [
+    `Подано на контроль: ${num(s.submitted_control)}`
+  ]);
+}
+
+function getWelderJoints(w) {
+  if (!w) return [];
+  if (jointsCache.has(w.id)) return jointsCache.get(w.id);
+
+  const rows = (DB.joints || [])
+    .filter(row => (jval(row, "welder_ids") || []).includes(w.id))
+    .sort((a, b) => String(jval(b, "weld_date") || "").localeCompare(String(jval(a, "weld_date") || "")));
+
+  jointsCache.set(w.id, rows);
+  return rows;
+}
+
+function computeStats(rows, start, end) {
+  const filtered = rows.filter(row => {
+    const d = jval(row, "weld_date");
+    return (!start || d >= start) && (!end || d <= end);
+  });
+
+  let production = 0, accepted = 0, rejected = 0, submitted = 0, wait = 0, notAssigned = 0;
+  for (const row of filtered) {
+    const prod = Number(jval(row, "production_value") || 0);
+    if (Number.isFinite(prod)) production += prod;
+    const result = jval(row, "result");
+    const shownResult = displayResult(result);
+    if (shownResult === "Годен") accepted++;
+    else if (shownResult === "Не годен") rejected++;
+    else if (shownResult === "Ожидание контроля") wait++;
+    else if (isNoControlResult(result)) notAssigned++;
+    if (!isNoControlResult(result)) submitted++;
+  }
+
+  const controlled = accepted + rejected;
+  return {
+    total_welded: filtered.length,
+    production,
+    submitted_control: submitted,
+    accepted,
+    rejected,
+    wait,
+    notAssigned,
+    reject_rate: controlled ? rejected / controlled : null
+  };
+}
+
+function renderPeriodCards(rows) {
+  const start = $("periodStart").value;
+  const end = $("periodEnd").value;
+  const s = computeStats(rows, start, end);
+  const label = `${dateRu(start)} — ${dateRu(end)}`;
+  $("periodCards").innerHTML = summaryPanel("Выбранный период", s, [
+    `Подано на контроль: ${num(s.submitted_control)}`,
+    `Ожидание контроля: ${num(s.wait)}`,
+    `Контроль РК/УЗК не требуется: ${num(s.notAssigned)}`
+  ], label);
+}
+
+function renderWelder(w) {
+  selectedWelder = w;
+  renderTopHero(w);
+  $("welderBlock").classList.remove("hidden");
+  renderAllTimeCards(w);
+
+  const meta = DB.meta || {};
+  $("periodStart").value = meta.period_start || "";
+  $("periodEnd").value = meta.period_end || "";
+  $("jointDateStart").value = "";
+  $("jointDateEnd").value = "";
+
+  const rows = getWelderJoints(w);
+  renderPeriodCards(rows);
+  currentPage = 1;
+  renderJointsTable();
+  updateDbUpdateStatus();
+}
+
+function filterCurrentRows() {
+  const w = selectedWelder;
+  if (!w) return [];
+  const rows = getWelderJoints(w);
+  const q = norm($("jointSearch").value);
+  const rf = $("resultFilter").value;
+  const ds = $("jointDateStart").value;
+  const de = $("jointDateEnd").value;
+
+  return rows.filter(row => {
+    const wd = jval(row, "weld_date") || "";
+    const shownResult = displayResult(jval(row, "result"));
+    if (rf && shownResult !== rf) return false;
+    if (ds && wd < ds) return false;
+    if (de && wd > de) return false;
+    if (!q) return true;
+    const hay = [
+      jval(row, "isometry"), jval(row, "joint_type"), jval(row, "joint_no"), jval(row, "vt_request"),
+      jval(row, "rt_request"), jval(row, "ut_request"), jval(row, "welding_method"), jval(row, "material"),
+      jval(row, "foreman"), jval(row, "brigadier"), shownResult, jval(row, "defects"), jval(row, "defect_text"), jval(row, "defect")
+    ].map(norm).join(" ");
+    return hay.includes(q);
+  });
+}
+
+function renderJointsTable() {
+  currentRows = filterCurrentRows();
+  const pageSize = Number($("pageSize").value || 100);
+  const pages = Math.max(1, Math.ceil(currentRows.length / pageSize));
+  currentPage = Math.min(Math.max(1, currentPage), pages);
+  const startIdx = (currentPage - 1) * pageSize;
+  const rows = currentRows.slice(startIdx, startIdx + pageSize);
+
+  $("jointCount").textContent = `найдено: ${num(currentRows.length)} / всего: ${num(getWelderJoints(selectedWelder).length)}`;
+  $("jointsBody").innerHTML = rows.map(row => {
+    const requests = [
+      jval(row, "vt_request") ? `ВИК: ${escapeHtml(jval(row, "vt_request"))}` : "",
+      jval(row, "rt_request") ? `РК: ${escapeHtml(jval(row, "rt_request"))}` : "",
+      jval(row, "ut_request") ? `УЗК: ${escapeHtml(jval(row, "ut_request"))}` : "",
+    ].filter(Boolean).join("<br>");
+
+    return `<tr>
+      <td>${dateRuTable(jval(row, "weld_date"))}</td>
+      <td class="long">${escapeHtml(isoShort(jval(row, "isometry")))}</td>
+      <td>${escapeHtml(jval(row, "joint_type"))}</td>
+      <td>${escapeHtml(jval(row, "joint_no"))}</td>
+      <td>${escapeHtml(jval(row, "material"))}</td>
+      <td>${escapeHtml(jval(row, "diameter_mm"))} / ${escapeHtml(jval(row, "thickness_mm"))}</td>
+      <td>${escapeHtml(jval(row, "welding_method"))}</td>
+      <td class="long">${requests || "—"}</td>
+      <td>${escapeHtml(jval(row, "brigadier"))}</td>
+      <td>${escapeHtml(jval(row, "foreman"))}</td>
+      <td class="result-cell">${badge(jval(row, "result"))}</td>
+      <td class="long">${jointDefects(row)}</td>
+    </tr>`;
+  }).join("");
+
+  $("pageInfo").textContent = `Страница ${currentPage} из ${pages}; строки ${num(startIdx + 1)}–${num(Math.min(startIdx + rows.length, currentRows.length))}`;
+  $("prevPageBtn").disabled = currentPage <= 1;
+  $("nextPageBtn").disabled = currentPage >= pages;
+}
+
+function renderAdminTable() {
+  const q = norm($("adminTableSearch")?.value || "");
+  const status = $("adminStatusFilter")?.value || "";
+  adminRows = (DB?.welders || []).filter(w => {
+    if (status && w.status !== status) return false;
+    if (!q) return true;
+    return norm([w.name, w.stamp, w.status, w.organization, w.login, w.responsible].join(" ")).includes(q);
+  }).sort((a, b) => Number(b.stats_all?.total_welded || 0) - Number(a.stats_all?.total_welded || 0));
+
+  $("adminInfo").innerHTML = `Сварщиков в базе: <b>${num((DB?.welders || []).length)}</b><br>Показано в таблице: <b>${num(adminRows.length)}</b>`;
+  $("adminTableBody").innerHTML = adminRows.slice(0, 500).map(w => `
+    <tr data-wid="${escapeHtml(w.id)}" style="cursor:pointer;">
+      <td class="long"><b>${escapeHtml(w.name)}</b><br><span class="muted">${escapeHtml(w.login || "")}</span></td>
+      <td>${escapeHtml(w.stamp || "—")}</td>
+      <td>${escapeHtml(w.status || "—")}</td>
+      <td>${escapeHtml(w.organization || "—")}</td>
+      <td>${num(w.stats_all?.total_welded)}</td>
+      <td>${num(w.stats_all?.rejected)}</td>
+      <td>${percent(w.stats_all?.reject_rate)}</td>
+    </tr>`).join("");
+
+  [...$("adminTableBody").querySelectorAll("tr")].forEach(tr => {
+    tr.addEventListener("click", () => {
+      const w = welderById.get(tr.dataset.wid);
+      if (w) {
+        $("welderSelect").value = w.id;
+        renderWelder(w);
+        $("welderBlock").classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+  });
+}
+
+function filterWelderSelect() {
+  const q = norm($("welderSearch").value);
+  const list = (DB.welders || []).filter(w => !q || norm([w.name, w.stamp, w.organization, w.login, w.status].join(" ")).includes(q));
+  fillWelderSelect(list);
+}
+
+$("dbFile").addEventListener("change", async ev => {
+  const file = ev.target.files?.[0];
+  if (!file) return;
+  try {
+    setStatus("Читаю базу…");
+    const text = await blobToTextMaybeGzip(file);
+    DB = JSON.parse(text);
+    afterDbLoaded(file.name);
+  } catch (e) {
+    setStatus("Ошибка загрузки базы", "error");
+    $("loginMsg").innerHTML = `<span class="error">${escapeHtml(e.message)}</span>`;
+  }
+});
+
+$("loginBtn").addEventListener("click", doLogin);
+$("passwordInput").addEventListener("keydown", ev => { if (ev.key === "Enter") doLogin(); });
+$("loginInput").addEventListener("keydown", ev => { if (ev.key === "Enter") doLogin(); });
+$("logoutBtn").addEventListener("click", logout);
+
+$("tabPrimaryBtn").addEventListener("click", () => {
+  $("tabPrimaryBtn").classList.add("active");
+  $("tabRepairsBtn").classList.remove("active");
+  $("primaryTab").classList.remove("hidden");
+  $("repairsTab").classList.add("hidden");
+});
+$("tabRepairsBtn").addEventListener("click", () => {
+  $("tabRepairsBtn").classList.add("active");
+  $("tabPrimaryBtn").classList.remove("active");
+  $("primaryTab").classList.add("hidden");
+  $("repairsTab").classList.remove("hidden");
+});
+
+$("applyPeriodBtn").addEventListener("click", () => renderPeriodCards(getWelderJoints(selectedWelder)));
+$("resetJointDateBtn").addEventListener("click", () => { $("jointDateStart").value = ""; $("jointDateEnd").value = ""; currentPage = 1; renderJointsTable(); });
+$("jointSearch").addEventListener("input", () => { currentPage = 1; renderJointsTable(); });
+$("resultFilter").addEventListener("change", () => { currentPage = 1; renderJointsTable(); });
+$("jointDateStart").addEventListener("change", () => { currentPage = 1; renderJointsTable(); });
+$("jointDateEnd").addEventListener("change", () => { currentPage = 1; renderJointsTable(); });
+$("pageSize").addEventListener("change", () => { currentPage = 1; renderJointsTable(); });
+$("prevPageBtn").addEventListener("click", () => { currentPage--; renderJointsTable(); });
+$("nextPageBtn").addEventListener("click", () => { currentPage++; renderJointsTable(); });
+
+$("welderSearch").addEventListener("input", filterWelderSelect);
+$("openWelderBtn").addEventListener("click", () => {
+  const w = welderById.get($("welderSelect").value);
+  if (w) {
+    renderWelder(w);
+    $("welderBlock").classList.remove("hidden");
+  }
+});
+$("adminTableSearch").addEventListener("input", renderAdminTable);
+$("adminStatusFilter").addEventListener("change", renderAdminTable);
+$("resetAdminFilters").addEventListener("click", () => {
+  $("adminTableSearch").value = "";
+  $("adminStatusFilter").value = "";
+  renderAdminTable();
+});
+
+setLoginReady(false);
+updateHeaderControls();
+tryAutoLoad();
+</script>
+</body>
+</html>
