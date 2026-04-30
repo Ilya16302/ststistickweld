@@ -1,0 +1,15 @@
+# ЗАМЕНИ USER/REPO НА СВОЙ РЕПОЗИТОРИЙ
+
+sudo apt update
+sudo apt install -y nginx git
+
+sudo rm -rf /var/www/welding-site
+cd /var/www
+sudo git clone https://github.com/USER/REPO.git welding-site
+
+sudo cp /var/www/welding-site/nginx_welding_site.conf /etc/nginx/sites-available/welding-site
+sudo ln -sf /etc/nginx/sites-available/welding-site /etc/nginx/sites-enabled/welding-site
+sudo rm -f /etc/nginx/sites-enabled/default
+
+sudo nginx -t
+sudo systemctl reload nginx
